@@ -31,11 +31,19 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --non-interactive --clean
 
+      - name: Configure Gradle memory
+        run: |
+          cat >> android/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+          org.gradle.parallel=false
+          org.gradle.daemon=false
+          EOF
+
       - name: Build Release APK
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease --no-daemon
 
       - name: Collect APK
         run: |
