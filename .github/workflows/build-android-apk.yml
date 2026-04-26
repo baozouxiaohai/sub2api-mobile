@@ -1,0 +1,53 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Android native project
+        run: npx expo prebuild --platform android --non-interactive --clean
+
+      - name: Build Release APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          APK_PATH="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)"
+          cp "$APK_PATH" artifacts/sub2api-mobile-release.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sub2api-mobile-android-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
